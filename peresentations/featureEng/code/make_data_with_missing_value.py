@@ -18,6 +18,6 @@ df = pd.DataFrame(data)
 missing_indices = np.random.choice(df.index, size=50, replace=False)
 df.loc[missing_indices, 'Location_Score'] = np.nan
 
-df.to_excel('home_price_data_imputation.xlsx', index=False)
+df.to_excel('home_price_with_missing_valu.xlsx', index=False)
 
 print("Excel file 'home_price_data.xlsx' with synthetic home price data and missing values created successfully!")
