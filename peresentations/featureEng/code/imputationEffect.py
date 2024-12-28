@@ -5,71 +5,71 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
-# 1. ایجاد داده‌های اولیه با مقادیر پرت
-np.random.seed(0)
-data = np.random.randn(100, 1)
+# 1. تولید داده‌های مصنوعی (سن و وزن)
+np.random.seed(42)
+n_samples = 500
+age = np.random.randint(18, 80, size=n_samples)  # سن بین 18 تا 80 سال
+weight = 0.5 * age + 20 + np.random.randn(n_samples) * 10  # رابطه خطی + نویز
 
-# ایجاد مقادیر پرت با ابعاد صحیح
-outliers = np.random.randn(10, 1) * 10  # مقادیر پرت به ابعاد (10, 1)
-data[::10] = outliers  # وارد کردن مقادیر پرت به داده‌ها
+# 2. افزودن مقادیر پرت (Outliers)
+outlier_indices = np.random.choice(range(n_samples), size=20, replace=False)  # 20 داده پرت
+weight[outlier_indices] = weight[outlier_indices] * 10  # ضرب وزن در 10 برای پرت
+
+# 3. افزودن مقادیر گمشده (Missing Values)
+missing_rate = 0.2  # 20 درصد مقادیر گم‌شده
+missing_mask = np.random.rand(n_samples) < missing_rate
+weight_with_missing = weight.copy()
+weight_with_missing[missing_mask] = np.nan
 
 # تبدیل به DataFrame
-df = pd.DataFrame(data, columns=["Feature"])
+df = pd.DataFrame({'Age': age, 'Weight': weight_with_missing})
 
-# 2. ایجاد مقادیر گم‌شده به صورت تصادفی
-missing_rate = 0.2
-missing_mask = np.random.rand(*df.shape) < missing_rate
-df_missing = df.copy()
-df_missing[missing_mask] = np.nan
-
-# 3. استفاده از میانگین و میانه برای جاگذاری مقادیر گم‌شده
+# 4. روش‌های Imputation
+# - با میانگین (Mean)
 imputer_mean = SimpleImputer(strategy='mean')
-df_mean_imputed = imputer_mean.fit_transform(df_missing)
+df_mean = df.copy()
+df_mean['Weight'] = imputer_mean.fit_transform(df[['Weight']])
 
+# - با میانه (Median)
 imputer_median = SimpleImputer(strategy='median')
-df_median_imputed = imputer_median.fit_transform(df_missing)
+df_median = df.copy()
+df_median['Weight'] = imputer_median.fit_transform(df[['Weight']])
 
-# 4. ایجاد داده‌های هدف
-y = 2 * df.values.flatten() + 1 + np.random.randn(100)  # رگرسیون خطی با نویز
+# 5. رگرسیون خطی برای هر دو روش
+def train_and_predict(df, label):
+    X = df['Age'].values.reshape(-1, 1)
+    y = df['Weight'].values
+    model = LinearRegression()
+    model.fit(X, y)
+    y_pred = model.predict(X)
+    return X, y, y_pred, model
 
-# تقسیم داده‌ها به مجموعه‌های آموزش و تست
-X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, random_state=42)
+# - با میانگین
+X_mean, y_mean, y_pred_mean, model_mean = train_and_predict(df_mean, 'Mean Imputation')
 
-# مدل رگرسیون خطی
-model = LinearRegression()
+# - با میانه
+X_median, y_median, y_pred_median, model_median = train_and_predict(df_median, 'Median Imputation')
 
-# آموزش مدل با داده‌های اولیه
-model.fit(X_train, y_train)
-y_pred_initial = model.predict(X_test)
+# 6. نمایش نتایج در نمودار
+plt.figure(figsize=(15, 6))
 
-# آموزش مدل با داده‌های جاگذاری‌شده (میانه)
-model.fit(X_train, y_train)
-y_pred_median = model.predict(X_test)
-
-# آموزش مدل با داده‌های جاگذاری‌شده (میانگین)
-model.fit(X_train, y_train)
-y_pred_mean = model.predict(X_test)
-
-# 5. ترسیم نمودار اول (خط رگرسیون و داده‌های واقعی)
-plt.figure(figsize=(12, 6))
+# نمودار داده‌های میانگین
 plt.subplot(1, 2, 1)
-plt.scatter(X_test, y_test, label='Actual Data', color='black', alpha=0.6)
-plt.plot(X_test, y_pred_initial, label='Regression Line (Initial)', color='blue', linewidth=2)
-plt.xlabel('Feature')
-plt.ylabel('Target')
-plt.title('Regression Line with Actual Data')
+plt.scatter(X_mean, y_mean, label='Data (Mean Imputation)', color='blue', alpha=0.5)
+plt.plot(X_mean, y_pred_mean, label='Regression Line (Mean)', color='red', linewidth=2)
+plt.xlabel('Age')
+plt.ylabel('Weight')
+plt.title('Prediction with Mean Imputation')
 plt.legend()
 
-# 6. ترسیم نمودار دوم (مقایسه پیش‌بینی‌ها با روش‌های مختلف Imputation)
+# نمودار داده‌های میانه
 plt.subplot(1, 2, 2)
-plt.scatter(X_test, y_test, label='Actual Data', color='black', alpha=0.6)
-plt.plot(X_test, y_pred_median, label='Prediction (Median Imputation)', linestyle='-.', color='green')
-plt.plot(X_test, y_pred_mean, label='Prediction (Mean Imputation)', linestyle=':', color='red')
-plt.xlabel('Feature')
-plt.ylabel('Target')
-plt.title('Predictions with Imputation Strategies')
+plt.scatter(X_median, y_median, label='Data (Median Imputation)', color='green', alpha=0.5)
+plt.plot(X_median, y_pred_median, label='Regression Line (Median)', color='orange', linewidth=2)
+plt.xlabel('Age')
+plt.ylabel('Weight')
+plt.title('Prediction with Median Imputation')
 plt.legend()
 
-# نمایش نمودارها
 plt.tight_layout()
 plt.show()
